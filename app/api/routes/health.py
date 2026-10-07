@@ -10,6 +10,12 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
+@router.get("", summary="Health status")
+async def health_check() -> JSONResponse:
+    """Return 200 when service is running."""
+    return JSONResponse(content={"status": "ok"})
+
+
 @router.get("/live", summary="Liveness probe")
 async def liveness() -> JSONResponse:
     """Return 200 when the process is alive."""
