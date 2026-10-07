@@ -19,7 +19,10 @@ import app.models.certificate  # noqa: F401
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    try:
+        fileConfig(config.config_file_name)
+    except Exception:
+        pass
 
 # Override sqlalchemy.url from environment
 database_url = os.environ.get("DATABASE_URL", "")
