@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: certuser
+      POSTGRES_PASSWORD: certpass
+      POSTGRES_DB: certdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U certuser -d certdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://certuser:certpass@postgres:5432/certdb
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_ROOT: /app/storage
+      MAX_RECIPIENTS_PER_JOB: 500
+      BATCH_SIZE: 50
+      LOG_LEVEL: INFO
+    volumes:
+      - .:/app
+      - certificate_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      DATABASE_URL: postgresql+asyncpg://certuser:certpass@postgres:5432/certdb
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_ROOT: /app/storage
+      MAX_RECIPIENTS_PER_JOB: 500
+      BATCH_SIZE: 50
+      LOG_LEVEL: INFO
+    volumes:
+      - .:/app
+      - certificate_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  certificate_storage:
