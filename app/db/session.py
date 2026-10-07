@@ -28,6 +28,31 @@ def get_engine():
     return _engine
 
 
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+from sqlalchemy.pool import NullPool
+
+
+@asynccontextmanager
+async def worker_session() -> AsyncGenerator[AsyncSession, None]:
+    """Provide an isolated async session with NullPool for Celery worker processes.
+
+    Avoids event-loop binding conflicts when tasks create fresh event loops.
+    """
+    settings = get_settings()
+    engine = create_async_engine(settings.database_url, echo=False, poolclass=NullPool)
+    factory = async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False,
+        autocommit=False,
+    )
+    async with factory() as session:
+        yield session
+    await engine.dispose()
+
+
 def async_session_factory() -> AsyncSession:  # type: ignore[return]
     """Return a new async session context manager."""
     factory = async_sessionmaker(

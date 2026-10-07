@@ -58,14 +58,14 @@ def dispatch_job_batches(self, job_id: str, batch_size: int) -> None:  # type: i
 
 
 async def _dispatch(job_id_str: str, batch_size: int) -> None:
-    from app.db.session import async_session_factory  # noqa: PLC0415
+    from app.db.session import worker_session  # noqa: PLC0415
     from app.models.generation_job import JobStatus  # noqa: PLC0415
     from app.repositories.certificate_repository import CertificateRepository  # noqa: PLC0415
     from app.repositories.generation_job_repository import GenerationJobRepository  # noqa: PLC0415
 
     job_id = uuid.UUID(job_id_str)
 
-    async with async_session_factory() as session:
+    async with worker_session() as session:
         job_repo = GenerationJobRepository(session)
         cert_repo = CertificateRepository(session)
 
@@ -127,13 +127,13 @@ def process_certificate_batch(  # type: ignore[misc]
 
 
 async def _process_batch(job_id_str: str, certificate_id_strs: list[str]) -> None:
-    from app.db.session import async_session_factory  # noqa: PLC0415
+    from app.db.session import worker_session  # noqa: PLC0415
     from app.repositories.generation_job_repository import GenerationJobRepository  # noqa: PLC0415
     from app.services.certificate_service import CertificateService  # noqa: PLC0415
 
     job_id = uuid.UUID(job_id_str)
 
-    async with async_session_factory() as session:
+    async with worker_session() as session:
         job_repo = GenerationJobRepository(session)
         job = await job_repo.get(job_id)
         if job is None:
@@ -163,13 +163,13 @@ async def _process_batch(job_id_str: str, certificate_id_strs: list[str]) -> Non
 
 async def _finalize_job(job_id_str: str) -> None:
     """Check if the job is done and update its terminal status if so."""
-    from app.db.session import async_session_factory  # noqa: PLC0415
+    from app.db.session import worker_session  # noqa: PLC0415
     from app.models.generation_job import JobStatus  # noqa: PLC0415
     from app.repositories.generation_job_repository import GenerationJobRepository  # noqa: PLC0415
 
     job_id = uuid.UUID(job_id_str)
 
-    async with async_session_factory() as session:
+    async with worker_session() as session:
         job_repo = GenerationJobRepository(session)
         job = await job_repo.get(job_id)
         if job is None:
