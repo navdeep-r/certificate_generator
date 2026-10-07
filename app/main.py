@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.core.exceptions import AppError
 from app.core.logging import configure_logging, get_logger
-from app.api.routes import health
+from app.api.routes import certificates, generation_jobs, health
 
 logger = get_logger(__name__)
 
@@ -48,6 +48,16 @@ def create_app() -> FastAPI:
 
     # ── Routers ──────────────────────────────────────────────────────────────
     application.include_router(health.router, prefix="/health", tags=["Health"])
+    application.include_router(
+        generation_jobs.router,
+        prefix="/api/v1/generation-jobs",
+        tags=["Generation Jobs"],
+    )
+    application.include_router(
+        certificates.router,
+        prefix="/api/v1/certificates",
+        tags=["Certificates"],
+    )
 
     logger.info(
         "app_startup | max_recipients=%d | batch_size=%d | storage=%s",
